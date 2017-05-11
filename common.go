@@ -2,6 +2,8 @@ package rpsls
 
 import (
 	"fmt"
+	"math"
+	"net/http"
 	"os"
 	"time"
 )
@@ -41,7 +43,7 @@ func HostName() string {
 const timeFormat = "Mon January 15:04:05 2006"
 
 func formatDuration(duration time.Duration) string {
-	return fmt.Sprintf("%d:%02d:%2f", int(duration.Hours()), int(duration.Minutes()), duration.Seconds())
+	return fmt.Sprintf("%d:%02d:%2f", int(duration.Hours()), int(duration.Minutes())%60, math.Mod(duration.Seconds(), 60))
 }
 
 var hostName string
@@ -55,4 +57,11 @@ func init() {
 	}
 
 	startTime = time.Now()
+}
+
+func DefaultToJson(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		handler.ServeHTTP(response, request)
+	})
 }

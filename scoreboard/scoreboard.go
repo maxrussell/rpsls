@@ -11,11 +11,12 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/scoreboard", getScoreboard)
-	http.HandleFunc("/results", addResult)
-	http.HandleFunc("/health", getHealthCheck)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/scoreboard", getScoreboard)
+	mux.HandleFunc("/results", addResult)
+	mux.HandleFunc("/health", getHealthCheck)
 
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8081", rpsls.DefaultToJson(mux))
 	log.Fatal(err)
 }
 

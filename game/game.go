@@ -2,21 +2,27 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/maxrussell/rpsls"
 	"github.com/maxrussell/rpsls/game/engine"
 )
 
-func main() {
-	http.HandleFunc("/choices", getChoices)
-	http.HandleFunc("/choice", getRandomChoice)
-	http.HandleFunc("/play", play)
-	http.HandleFunc("/health", getHealthCheck)
+var scoreboardLocation = os.Getenv("SCOREBOARD")
 
-	err := http.ListenAndServe(":8080", nil)
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/choices", getChoices)
+	mux.HandleFunc("/choice", getRandomChoice)
+	mux.HandleFunc("/play", play)
+	mux.HandleFunc("/health", getHealthCheck)
+
+	err := http.ListenAndServe(":8080", rpsls.DefaultToJson(mux))
 	log.Fatal(err)
 }
 
@@ -103,6 +109,41 @@ func play(response http.ResponseWriter, request *http.Request) {
 		result.Results = "win"
 	} else {
 		result.Results = "lose"
+	}
+
+	fmt.Printf("Scoreboard location: '%s'\n", scoreboardLocation)
+	if len(scoreboardLocation) > 0 {
+		var playerScore, computerScore int
+		if result.Results == "win" {
+			playerScore = 1
+		} else if result.Results == "lose" {
+			computerScore = 1
+		}
+		fmt.Printf("Player score: %d; computer score: %d\n", playerScore, computerScore)
+
+		players := []rpsls.Player{
+			rpsls.Player{
+				UserName: player[0],
+				Score:    playerScore,
+			},
+			rpsls.Player{
+				UserName: computer[0],
+				Score:    computerScore,
+			},
+		}
+		playersJson, err := json.Marshal(players)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(err.Error()))
+			return
+		}
+		body := strings.NewReader(string(playersJson))
+		_, err = http.Post(scoreboardLocation+"/results", "application/json", body)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(err.Error()))
+			return
+		}
 	}
 
 	resultJson, err := json.Marshal(result)
