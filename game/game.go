@@ -111,7 +111,6 @@ func play(response http.ResponseWriter, request *http.Request) {
 		result.Results = "lose"
 	}
 
-	fmt.Printf("Scoreboard location: '%s'\n", scoreboardLocation)
 	if len(scoreboardLocation) > 0 {
 		var playerScore, computerScore int
 		if result.Results == "win" {
