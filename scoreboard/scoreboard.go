@@ -20,7 +20,7 @@ func main() {
 }
 
 func getScoreboard(response http.ResponseWriter, _ *http.Request) {
-	players, err := storage.GetTopPlayers(10) // consider making this a config flag or query parameter
+	players, err := storage.GetTopPlayers(10) // TODO: consider making this a config flag and/or query parameter
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write([]byte(err.Error()))

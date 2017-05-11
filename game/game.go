@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/maxrussell/rpsls"
 	"github.com/maxrussell/rpsls/game/engine"
 )
 
@@ -115,5 +116,18 @@ func play(response http.ResponseWriter, request *http.Request) {
 }
 
 func getHealthCheck(response http.ResponseWriter, _ *http.Request) {
+	healthJson, err := json.Marshal(rpsls.HealthCheck{
+		Status:    "OK",
+		Name:      rpsls.HostName(),
+		Version:   "1.0",
+		StartTime: rpsls.StartTimeString(),
+		UpTime:    rpsls.UpTimeString(),
+	})
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(err.Error()))
+		return
+	}
 
+	response.Write(healthJson)
 }
