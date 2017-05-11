@@ -3,6 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 )
 
 var names map[Choice]string = map[Choice]string{
@@ -45,7 +47,24 @@ func GetRandomChoice() (Choice, error) {
 	return choices[randomNumber%len(choices)], nil
 }
 
-// TODO: actually implement
+// Consider abstracting this for testability
 func getRandomNumber() (int, error) {
-	return 4, nil // guaranteed random
+	response, err := http.Get("http://codechallenge.boohma.com/random")
+	if err != nil {
+		return -1, err
+	}
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return -1, err
+	}
+
+	decodedResponse := struct {
+		RandomNumber int `json:"random_number"`
+	}{}
+	err = json.Unmarshal([]byte(responseBody), &decodedResponse)
+	if err != nil {
+		return -1, err
+	}
+
+	return decodedResponse.RandomNumber, nil
 }
