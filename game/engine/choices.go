@@ -7,18 +7,44 @@ import (
 	"net/http"
 )
 
+const (
+	Rock     = 1
+	Paper    = 2
+	Scissors = 3
+	Lizard   = 4
+	Spock    = 5
+)
+
 var names map[Choice]string = map[Choice]string{
-	1: "Rock",
-	2: "Paper",
-	3: "Scissors",
-	4: "Lizard",
-	5: "Spock",
+	Rock:     "Rock",
+	Paper:    "Paper",
+	Scissors: "Scissors",
+	Lizard:   "Lizard",
+	Spock:    "Spock",
 }
 
 type Choice int
 
 func (c Choice) Name() string {
 	return names[c]
+}
+
+func (c Choice) Beats(choice Choice) bool {
+	for _, thingCBeats := range winTable[c] {
+		if thingCBeats == choice {
+			return true
+		}
+	}
+	return false
+}
+
+func (c Choice) Valid() bool {
+	for _, choice := range GetChoices() {
+		if c == choice {
+			return true
+		}
+	}
+	return false
 }
 
 type choiceJson struct {
