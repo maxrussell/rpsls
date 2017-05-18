@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	Rock     = 1
-	Paper    = 2
-	Scissors = 3
-	Lizard   = 4
-	Spock    = 5
+	Rock     Choice = 1
+	Paper    Choice = 2
+	Scissors Choice = 3
+	Lizard   Choice = 4
+	Spock    Choice = 5
 )
 
 var names map[Choice]string = map[Choice]string{
@@ -47,13 +47,11 @@ func (c Choice) Valid() bool {
 	return false
 }
 
-type choiceJson struct {
-	Id   int
-	Name string
-}
-
 func (c Choice) MarshalJSON() ([]byte, error) {
-	return json.Marshal(choiceJson{
+	return json.Marshal(struct {
+		Id   int
+		Name string
+	}{
 		Id:   int(c),
 		Name: c.Name(),
 	})

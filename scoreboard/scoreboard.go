@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/maxrussell/rpsls"
 	"github.com/maxrussell/rpsls/scoreboard/storage"
@@ -16,26 +17,41 @@ func main() {
 	mux.HandleFunc("/results", addResult)
 	mux.HandleFunc("/health", getHealthCheck)
 
-	err := http.ListenAndServe(":8081", rpsls.DefaultToJson(mux))
+	err := http.ListenAndServe(":8081", rpsls.DefaultToPlainText(mux))
 	log.Fatal(err)
 }
 
-func getScoreboard(response http.ResponseWriter, _ *http.Request) {
-	players, err := storage.GetTopPlayers(10) // TODO: consider making this a config flag and/or query parameter
+func getScoreboard(response http.ResponseWriter, request *http.Request) {
+	topPlayersToShow := 10
+	query := request.URL.Query()
+	if countStr := query.Get("count"); len(countStr) > 0 {
+		count, err := strconv.ParseInt(countStr, 10, 32)
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte("Parameter count must be a base-ten integer or omitted."))
+			return
+		}
+
+		topPlayersToShow = int(count)
+	}
+
+	players, err := storage.GetTopPlayers(topPlayersToShow)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error retrieving top players."))
+		log.Println("Error getting top players from storage:", err.Error())
 		return
 	}
 
 	playersJson, err := json.Marshal(players)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling response as JSON."))
+		log.Println("Error marshaling top players as JSON:", err.Error())
 		return
 	}
 
-	response.Write(playersJson)
+	rpsls.WriteAsJson(response, playersJson)
 }
 
 func addResult(response http.ResponseWriter, request *http.Request) {
@@ -48,7 +64,8 @@ func addResult(response http.ResponseWriter, request *http.Request) {
 	}()
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error reading request body."))
+		log.Println("Error reading request body:", err.Error())
 		return
 	}
 
@@ -56,7 +73,7 @@ func addResult(response http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(body, &players)
 	if err != nil {
 		response.WriteHeader(http.StatusBadRequest)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Request body was malformed and couldn't be unmarshaled as JSON."))
 		return
 	}
 
@@ -90,10 +107,12 @@ func addResult(response http.ResponseWriter, request *http.Request) {
 	err = storage.AddResult(winner, loser)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error adding result to storage."))
+		log.Println("Error adding result to storage:", err.Error())
 		return
 	}
 
+	response.Header().Del("Content-Type")
 	response.WriteHeader(http.StatusNoContent)
 }
 
@@ -102,9 +121,10 @@ func getHealthCheck(response http.ResponseWriter, request *http.Request) {
 	healthCheckJson, err := json.Marshal(healthCheck)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling health check as JSON."))
+		log.Println("Error marshaling health check as JSON:", err.Error())
 		return
 	}
 
-	response.Write(healthCheckJson)
+	rpsls.WriteAsJson(response, healthCheckJson)
 }

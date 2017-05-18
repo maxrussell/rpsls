@@ -17,8 +17,8 @@ type HealthCheck struct {
 	Status       string
 	Name         string
 	Version      string
-	StartTime    string // consider making a type based on time.Time and using json.Marshaler
-	UpTime       string // consider making a type based on time.Duration and using json.Marshaler
+	StartTime    string
+	UpTime       string
 	Dependencies []Dependency
 }
 
@@ -59,9 +59,18 @@ func init() {
 	startTime = time.Now()
 }
 
-func DefaultToJson(handler http.Handler) http.Handler {
+// DefaultToPlainText is HTTP a middleware decorator that sets the Content-Type header on all outgoing requests
+// to text/plain. This header can be overridden by handlers.
+func DefaultToPlainText(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Set("Content-Type", "application/json")
+		response.Header().Set("Content-Type", "text/plain")
 		handler.ServeHTTP(response, request)
 	})
+}
+
+// WriteAsJson sets a Content-Type header of application/json and then writes the passed-in body to the ResponseWriter.
+// WriteAsJson returns the values returned by ResponseWriter.Write.
+func WriteAsJson(response http.ResponseWriter, body []byte) (int, error) {
+	response.Header().Set("Content-Type", "application/json")
+	return response.Write(body)
 }

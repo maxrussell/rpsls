@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/lib/pq"
 
@@ -12,8 +13,25 @@ import (
 var db *sql.DB
 
 func init() {
+	// Secret management is a huge field with many diverse strategies. The approach my team and I
+	// decided on at DealerPeak was:
+	// * use HashiCorp's Vault to actually store the secrets
+	// * each app reads, on stdin, its Vault key, which it then uses to access Vault
+	// * Vault has config about which app needs which secrets and denies access to unneeded ones
+	// * Vault interaction was abstracted behind one of our packages, so imported libraries
+	//   practically had no way to access our secrets (and thus no way to expose them)
+	//
+	// Implementing this solution here seemed out of scope and also would make deploying this app
+	// much more challenging, so I've decided on a simpler and popular, though less secure approach:
+	// environment variables. A deployment script would just set these as it launched the server.
+
+	host := os.Getenv("DBHOST")
+	user := os.Getenv("DBUSER")
+	pass := os.Getenv("DBPASS")
+	database := os.Getenv("DBDATABASE")
+
 	var err error
-	db, err = sql.Open("postgres", "user=maxrussell dbname=rpsls password=maxrussell host=localhost")
+	db, err = sql.Open("postgres", fmt.Sprintf("user=%s dbname=%s password=%s host=%s", user, database, pass, host))
 	if err != nil {
 		panic(err)
 	}
@@ -40,8 +58,7 @@ func AddResult(winner, loser rpsls.Player) error {
 		return fmt.Errorf("Error incrementing user's score: %s", err.Error())
 	}
 
-	err = tx.Commit()
-	return err
+	return tx.Commit()
 }
 
 func GetTopPlayers(count int) ([]rpsls.Player, error) {

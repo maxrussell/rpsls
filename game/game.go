@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +21,7 @@ func main() {
 	mux.HandleFunc("/play", play)
 	mux.HandleFunc("/health", getHealthCheck)
 
-	err := http.ListenAndServe(":8080", rpsls.DefaultToJson(mux))
+	err := http.ListenAndServe(":8080", rpsls.DefaultToPlainText(mux))
 	log.Fatal(err)
 }
 
@@ -31,29 +30,32 @@ func getChoices(response http.ResponseWriter, _ *http.Request) {
 	choicesJson, err := json.Marshal(choices)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling available choices as JSON."))
+		log.Println("Error marshaling available choices as JSON:", err.Error())
 		return
 	}
 
-	response.Write(choicesJson)
+	rpsls.WriteAsJson(response, choicesJson)
 }
 
 func getRandomChoice(response http.ResponseWriter, _ *http.Request) {
 	choice, err := engine.GetRandomChoice()
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error getting random choice."))
+		log.Println("Error getting random choice:", err.Error())
 		return
 	}
 
 	choiceJson, err := json.Marshal(choice)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling random choice as JSON."))
+		log.Println("Error marshaling random choice as JSON:", err.Error())
 		return
 	}
 
-	response.Write(choiceJson)
+	rpsls.WriteAsJson(response, choiceJson)
 }
 
 func play(response http.ResponseWriter, request *http.Request) {
@@ -72,7 +74,8 @@ func play(response http.ResponseWriter, request *http.Request) {
 	computerChoice, err := engine.GetRandomChoice()
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte("Unable to choose randomly for the computer: " + err.Error()))
+		response.Write([]byte("Unable to choose randomly for the computer."))
+		log.Println("Error trying to choose randomly for the computer:", err.Error())
 		return
 	}
 
@@ -81,7 +84,8 @@ func play(response http.ResponseWriter, request *http.Request) {
 		playerChoice, err = engine.GetRandomChoice()
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte("Unable to choose randomly for the player: " + err.Error()))
+			response.Write([]byte("Unable to choose randomly for the player."))
+			log.Println("Error trying to choose randomly for the player:", err.Error())
 			return
 		}
 	} else {
@@ -118,7 +122,6 @@ func play(response http.ResponseWriter, request *http.Request) {
 		} else if result.Results == "lose" {
 			computerScore = 1
 		}
-		fmt.Printf("Player score: %d; computer score: %d\n", playerScore, computerScore)
 
 		players := []rpsls.Player{
 			rpsls.Player{
@@ -133,14 +136,16 @@ func play(response http.ResponseWriter, request *http.Request) {
 		playersJson, err := json.Marshal(players)
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte(err.Error()))
+			response.Write([]byte("Error trying to marshal results as JSON; results were not posted to scoreboard."))
+			log.Println("Error trying to marshal results as JSON; not posting to scoreboard. Error:", err.Error())
 			return
 		}
 		body := strings.NewReader(string(playersJson))
 		_, err = http.Post(scoreboardLocation+"/results", "application/json", body)
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte(err.Error()))
+			response.Write([]byte("There was an error sending results to the scoreboard."))
+			log.Println("Error sending results to scoreboard:", err.Error())
 			return
 		}
 	}
@@ -148,11 +153,12 @@ func play(response http.ResponseWriter, request *http.Request) {
 	resultJson, err := json.Marshal(result)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling results as JSON."))
+		log.Println("Error marshaling results as JSON:", err.Error())
 		return
 	}
 
-	response.Write(resultJson)
+	rpsls.WriteAsJson(response, resultJson)
 }
 
 func getHealthCheck(response http.ResponseWriter, _ *http.Request) {
@@ -165,9 +171,10 @@ func getHealthCheck(response http.ResponseWriter, _ *http.Request) {
 	})
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(err.Error()))
+		response.Write([]byte("Error marshaling as JSON."))
+		log.Println("Error marshaling health check results as JSON:", err.Error())
 		return
 	}
 
-	response.Write(healthJson)
+	rpsls.WriteAsJson(response, healthJson)
 }
